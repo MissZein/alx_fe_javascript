@@ -176,7 +176,6 @@ function importFromJsonFile(event) {
   };
   reader.readAsText(file);
 }
-
 /**********************
  * DATA SYNCING
  **********************/
@@ -187,6 +186,7 @@ async function syncQuotes() {
 
     // Map local quotes by id for quick lookup
     const localMap = new Map(localQuotes.map(q => [q.id, q]));
+    let conflictsResolved = 0;
 
     // Resolve conflicts & merge
     serverQuotes.forEach(serverQ => {
@@ -195,6 +195,7 @@ async function syncQuotes() {
         // Conflict resolution: pick the newer one (server wins on tie)
         if (new Date(serverQ.updatedAt) >= new Date(localQ.updatedAt)) {
           localMap.set(serverQ.id, serverQ);
+          conflictsResolved++;
         }
       } else {
         localMap.set(serverQ.id, serverQ);
@@ -209,11 +210,19 @@ async function syncQuotes() {
     updateCategories();
     displayRandomQuote();
 
-    console.log("✅ Quotes synced with server");
+    // ✅ Notify user
+    if (conflictsResolved > 0) {
+      alert(`Quotes synced with server! ${conflictsResolved} conflicts resolved.`);
+    } else {
+      alert("Quotes synced with server!");
+    }
+
   } catch (err) {
     console.error("❌ Sync failed:", err);
+    alert("Failed to sync with server. Please try again later.");
   }
 }
+
 
 // Sync every 30 seconds
 setInterval(syncQuotes, 30000);
