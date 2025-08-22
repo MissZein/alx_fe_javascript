@@ -178,6 +178,51 @@ function importFromJsonFile(event) {
 }
 
 /**********************
+ * DATA SYNCING
+ **********************/
+async function syncQuotes() {
+  try {
+    const serverQuotes = await fetchServerQuotes(10); // fetch from server
+    let localQuotes = JSON.parse(localStorage.getItem("quotes")) || [];
+
+    // Map local quotes by id for quick lookup
+    const localMap = new Map(localQuotes.map(q => [q.id, q]));
+
+    // Resolve conflicts & merge
+    serverQuotes.forEach(serverQ => {
+      if (localMap.has(serverQ.id)) {
+        const localQ = localMap.get(serverQ.id);
+        // Conflict resolution: pick the newer one (server wins on tie)
+        if (new Date(serverQ.updatedAt) >= new Date(localQ.updatedAt)) {
+          localMap.set(serverQ.id, serverQ);
+        }
+      } else {
+        localMap.set(serverQ.id, serverQ);
+      }
+    });
+
+    // Save merged data back
+    localQuotes = Array.from(localMap.values());
+    localStorage.setItem("quotes", JSON.stringify(localQuotes));
+
+    // Refresh UI (categories + displayed quote)
+    updateCategories();
+    displayRandomQuote();
+
+    console.log("✅ Quotes synced with server");
+  } catch (err) {
+    console.error("❌ Sync failed:", err);
+  }
+}
+
+// Sync every 30 seconds
+setInterval(syncQuotes, 30000);
+
+// Also sync once when the app loads
+syncQuotes();
+
+
+/**********************
  * INIT
  **********************/
 window.onload = function() {
