@@ -1,98 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dynamic Quote Generator — Sync + Conflicts</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynamic Quote Generator</title>
   <style>
-    :root{
-      --primary:#2d6cdf; --bg:#f6f8fc; --card:#ffffff; --muted:#6b7280; --ok:#0ea5e9; --warn:#f59e0b; --err:#ef4444;
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to right, #6a11cb, #2575fc);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
     }
-    *{box-sizing:border-box}
-    body{
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      margin:0; background:var(--bg); color:#111827;
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
     }
-    .wrap{
-      max-width:900px; margin:32px auto; padding:0 16px;
+    #quoteDisplay {
+      margin: 20px;
+      padding: 25px;
+      width: 70%;
+      max-width: 600px;
+      background: #fff;
+      color: #333;
+      border-radius: 12px;
+      box-shadow: 0px 6px 12px rgba(0,0,0,0.2);
+      font-size: 1.2rem;
+      font-style: italic;
+      text-align: center;
+      position: relative;
     }
-    h1{margin:0 0 16px; text-align:center;}
-    .toolbar, .form, .panel {
-      background:var(--card); border-radius:12px; padding:16px; box-shadow:0 6px 16px rgba(0,0,0,.06);
-      margin-bottom:16px;
+    #quoteDisplay::before {
+      content: "“";
+      font-size: 3rem;
+      color: #6a11cb;
+      position: absolute;
+      top: -15px;
+      left: 15px;
     }
-    .toolbar .row{display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:center}
-    select, input, button{
-      padding:10px 12px; border-radius:10px; border:1px solid #e5e7eb; background:#fff; font-size:14px;
+    .controls {
+      margin: 15px;
+      text-align: center;
     }
-    button{background:var(--primary); color:#fff; border:none; cursor:pointer}
-    button.secondary{background:#e5e7eb; color:#111827}
-    button.warn{background:var(--warn); color:#111827}
-    button:disabled{opacity:.6; cursor:not-allowed}
-    .quote{
-      padding:14px; border-left:4px solid var(--primary); border-radius:8px; background:#eef3ff; margin-bottom:10px;
+    select, button, input[type="text"], input[type="file"] {
+      margin: 6px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      font-size: 1rem;
+      cursor: pointer;
     }
-    .quote small{display:block; color:var(--muted); margin-top:6px}
-    .grid{display:grid; gap:12px}
-    @media(min-width:720px){ .grid{grid-template-columns:1fr 1fr} }
-    .status{
-      border-radius:10px; padding:10px 12px; margin-bottom:16px; font-size:14px;
-      display:flex; align-items:center; gap:8px;
+    button {
+      background: #2575fc;
+      color: #fff;
+      transition: background 0.3s;
     }
-    .status.info{background:#e0f2fe}
-    .status.ok{background:#dcfce7}
-    .status.warn{background:#fef3c7}
-    .status.err{background:#fee2e2}
-    .muted{color:var(--muted)}
-    .conflict{border:1px dashed #f59e0b; border-radius:10px; padding:10px}
-    .pill{display:inline-block; padding:2px 8px; border-radius:999px; background:#e5e7eb; font-size:12px; margin-left:6px}
-    .note{font-size:12px; color:var(--muted)}
+    button:hover {
+      background: #1a5edb;
+    }
+    select, input[type="text"], input[type="file"] {
+      background: #fff;
+      color: #333;
+      border: 1px solid #ccc;
+    }
+    #addQuoteForm {
+      margin-top: 25px;
+      text-align: center;
+      background: rgba(255,255,255,0.1);
+      padding: 15px;
+      border-radius: 10px;
+      width: 70%;
+      max-width: 600px;
+    }
+    #notification {
+      margin-top: 10px;
+      font-size: 0.95rem;
+      font-style: italic;
+      color: #ffeb3b;
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Dynamic Quote Generator</h1>
+  <h1>✨ Dynamic Quote Generator ✨</h1>
 
-    <!-- Sync status -->
-    <div id="syncStatus" class="status info">Initializing…</div>
+  <div id="quoteDisplay">Click "New Quote" to start!</div>
 
-    <!-- Filter + Actions -->
-    <div class="toolbar">
-      <div class="row">
-        <label for="categoryFilter" class="muted">Filter:</label>
-        <select id="categoryFilter" onchange="filterQuotes()">
-          <option value="all">All Categories</option>
-        </select>
-
-        <button id="btnNewQuote" class="secondary" onclick="displayRandomQuote()">Random Quote</button>
-        <button id="btnSyncNow" onclick="syncWithServer()">Sync Now</button>
-        <span class="note">Auto-sync every <span id="syncIntervalLabel">30s</span></span>
-      </div>
-    </div>
-
-    <!-- Quotes list -->
-    <div id="quotesPanel" class="panel"></div>
-
-    <!-- Add quote -->
-    <div class="form">
-      <h3>Add a Quote</h3>
-      <form id="addQuoteForm">
-        <div class="grid">
-          <input id="quoteText" type="text" placeholder="Quote text" required />
-          <input id="quoteAuthor" type="text" placeholder="Author" required />
-          <input id="quoteCategory" type="text" placeholder="Category (e.g., Motivation)" required />
-          <button type="submit">Add Quote</button>
-        </div>
-        <p class="note">New quotes are saved locally and included in the next sync.</p>
-      </form>
-    </div>
-
-    <!-- Conflict viewer -->
-    <div class="panel">
-      <h3>Conflicts & Updates <span id="conflictCount" class="pill">0</span></h3>
-      <div id="conflictPanel" class="grid"></div>
-    </div>
+  <div class="controls">
+    <button onclick="displayRandomQuote()">New Quote</button>
+    <select id="categoryFilter" onchange="filterQuotes()">
+      <option value="all">All Categories</option>
+    </select>
+    <button onclick="exportToJsonFile()">Export Quotes</button>
+    <input type="file" id="importFile" accept=".json" onchange="importFromJsonFile(event)" />
   </div>
+
+  <form id="addQuoteForm" onsubmit="addQuote(event)">
+    <input type="text" id="newQuoteText" placeholder="Enter quote" required />
+    <input type="text" id="newQuoteCategory" placeholder="Enter category" required />
+    <button type="submit">Add Quote</button>
+  </form>
+
+  <div id="notification"></div>
 
   <script src="script.js"></script>
 </body>
